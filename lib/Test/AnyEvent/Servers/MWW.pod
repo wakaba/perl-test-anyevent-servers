@@ -1,0 +1,31 @@
+=head1 NAME
+
+Test::AnyEvent::Servers::MWW - Preparing MySQL, Web (Plack), and Workaholicd servers for testing
+
+=head1 DESCRIPTION
+
+The C<Test::AnyEvent::Servers::MWW> module can be used to prepare
+database (MySQL), Web (Plack-based), and workaholicd server processes
+for test scripts.
+
+=head1 SEE ALSO
+
+L<Test::MySQL::CreateDatabase>,
+L<Test::AnyEvent::MySQL::CreateDatabase>.
+
+L<Test::AnyEvent::plackup>.
+
+<https://github.com/wakaba/workaholicd>.
+
+=head1 AUTHOR
+
+Wakaba <wakabatan@hatena.ne.jp>.
+
+=head1 LICENSE
+
+Copyright 2012 Hatena <http://www.hatena.ne.jp/>.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut
