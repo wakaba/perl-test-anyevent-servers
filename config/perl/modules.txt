@@ -1,0 +1,6 @@
+AnyEvent
+AnyEvent::Util
+File::Temp
+MIME::Base64
+Path::Class
+Scalar::Util
