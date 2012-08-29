@@ -21,6 +21,10 @@ sub root_d {
     return $_[0]->{root_d};
 }
 
+sub _before_start_server {
+    #
+}
+
 # ------ MySQL server ------
 
 sub prep_f {
@@ -40,6 +44,10 @@ sub dsns_json_f {
 
 sub _start_mysql_server {
     weaken(my $self = shift);
+    unless ($self->{before_start_server_invoked}) {
+        $self->{before_start_server_invoked} = 1;
+        $self->_before_start_server;
+    }
     $self->{mysql_cv} = $self->mysql_server->prep_f_to_cv($self->prep_f);
 }
 
@@ -72,12 +80,20 @@ sub _set_web_server_options {
     $server->set_env(MYSQL_DSNS_JSON => $self->dsns_json_f->stringify);
 }
 
+sub web_server {
+    my $self = shift;
+    return $self->{web_server} ||= do {
+        my $server = Test::AnyEvent::plackup->new;
+        $server->app($self->psgi_f);
+        $self->_set_web_server_options($server);
+        $server;
+    };
+}
+
 sub _start_web_server {
     my $self = shift;
 
-    $self->{web_server} = my $server = Test::AnyEvent::plackup->new;
-    $server->app($self->psgi_f);
-    $self->_set_web_server_options($server);
+    my $server = $self->web_server;
 
     $self->{web_start_cv} = my $cv1 = AE::cv;
     $self->{web_stop_cv} = my $cv2 = AE::cv;
@@ -143,6 +159,7 @@ sub start_workaholicd_as_cv {
     $self->{workaholicd_boot_cv}->cb(sub {
         my $envs = {%ENV};
         $self->_set_workaholicd_options($envs);
+        local %ENV = %$envs;
         
         my $pid;
         $self->{workaholicd_cv} = run_cmd
@@ -172,11 +189,11 @@ sub web_hostname {
 }
 
 sub web_port {
-    return $_[0]->{web_server}->port;
+    return $_[0]->web_server->port;
 }
 
 sub web_host {
-    return $_[0]->web_hostname . ':' . $_[0]->{web_server}->port;
+    return $_[0]->web_hostname . ':' . $_[0]->web_server->port;
 }
 
 sub context_begin {
