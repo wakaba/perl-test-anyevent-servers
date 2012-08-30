@@ -37,7 +37,7 @@ PROVE = prove
 test: test-deps test-main
 
 test-deps: git-submodules pmb-install
-	cd t/modules/workaholicd && $(MAKE) deps
+	cd modules/workaholicd && $(MAKE) deps
 
 test-main:
 	$(PERL_ENV) $(PROVE) t/*.t

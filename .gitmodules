@@ -19,3 +19,6 @@
 [submodule "t/modules/web-useragent-functions"]
 	path = t/modules/web-useragent-functions
 	url = git://github.com/wakaba/perl-web-useragent-functions
+[submodule "modules/workaholicd"]
+	path = modules/workaholicd
+	url = git://github.com/wakaba/workaholicd
