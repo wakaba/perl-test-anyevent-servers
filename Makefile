@@ -37,6 +37,8 @@ PROVE = prove
 test: test-deps test-main
 
 test-deps: git-submodules pmb-install
+	-cd modules/rdb-utils && ln -s ../../local
+	-cd modules/workaholicd && ln -s ../../local
 	cd modules/rdb-utils && $(MAKE) deps
 	cd modules/workaholicd && $(MAKE) deps
 
