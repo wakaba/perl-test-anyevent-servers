@@ -1,9 +1,0 @@
-git://github.com/wakaba/perl-test-x1
-git://github.com/wakaba/perl-test-anyevent-plackup
-git://github.com/wakaba/perl-rdb-utils
-git://github.com/wakaba/workaholicd
-git://github.com/wakaba/perl-net-tcp-findport
-git://github.com/wakaba/perl-Parse-Netstat
-git://github.com/wakaba/perl-json-functions-xs
-git://github.com/wakaba/dongry
-git://github.com/wakaba/perl-web-useragent-functions

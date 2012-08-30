@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use Path::Class;
+use lib glob file(__FILE__)->dir->subdir('modules', '*', 'lib')->stringify;
 use File::Temp;
 use Test::X1;
 use Test::More;
@@ -75,7 +76,7 @@ test {
     }
 
     my $server = Test::AnyEvent::Servers::MWW->new_from_root_d($root_d);
-    $server->workaholicd_f(file(__FILE__)->dir->parent->subdir('local', 'submodules', 'workaholicd', 'bin')->file('workaholicd.pl'));
+    $server->workaholicd_f(file(__FILE__)->dir->parent->subdir('t', 'modules', 'workaholicd', 'bin')->file('workaholicd.pl'));
     my $cv1 = $server->start_mysql_and_web_servers_as_cv;
     my $cv2 = $server->start_workaholicd_as_cv;
     my $cv = AE::cv;

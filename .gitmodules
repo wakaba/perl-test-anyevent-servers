@@ -1,0 +1,21 @@
+[submodule "modules/rdb-utils"]
+	path = modules/rdb-utils
+	url = git://github.com/wakaba/perl-rdb-utils
+[submodule "t/modules/test-x1"]
+	path = t/modules/test-x1
+	url = git://github.com/wakaba/perl-test-x1
+[submodule "modules/test-anyevent-plackup"]
+	path = modules/test-anyevent-plackup
+	url = git://github.com/wakaba/perl-test-anyevent-plackup
+[submodule "t/modules/workaholicd"]
+	path = t/modules/workaholicd
+	url = git://github.com/wakaba/workaholicd
+[submodule "modules/json-functions-xs"]
+	path = modules/json-functions-xs
+	url = git://github.com/wakaba/perl-json-functions-xs
+[submodule "t/modules/dongry"]
+	path = t/modules/dongry
+	url = git://github.com/wakaba/dongry
+[submodule "t/modules/web-useragent-functions"]
+	path = t/modules/web-useragent-functions
+	url = git://github.com/wakaba/perl-web-useragent-functions

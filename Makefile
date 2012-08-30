@@ -36,9 +36,8 @@ PROVE = prove
 
 test: test-deps test-main
 
-test-deps: git-submodules local-submodules pmb-install
-	mkdir -p local/submodules/workaholicd/config/perl
-	-cd local/submodules/workaholicd/config/perl && ln -s ../../../../../config/perl/libs.txt
+test-deps: git-submodules pmb-install
+	cd t/modules/workaholicd && $(MAKE) deps
 
 test-main:
 	$(PERL_ENV) $(PROVE) t/*.t
