@@ -9,6 +9,7 @@ use Scalar::Util qw(weaken);
 use File::Temp;
 use Test::AnyEvent::MySQL::CreateDatabase;
 use Test::AnyEvent::plackup;
+use Test::AnyEvent::Workaholicd;
 
 sub new_from_root_d {
     return bless {workaholicd_boot_cv => AE::cv, root_d => $_[1]}, $_[0];
@@ -23,6 +24,22 @@ sub root_d {
 
 sub _before_start_server {
     #
+}
+
+# ------ Perl ------
+
+sub perl {
+    if (@_ > 1) {
+        $_[0]->{perl} = $_[1];
+    }
+    return $_[0]->{perl} || 'perl';
+}
+
+sub perl_inc {
+    if (@_ > 1) {
+        $_[0]->{perl_inc} = $_[1];
+    }
+    return $_[0]->{perl_inc} || [];
 }
 
 # ------ MySQL server ------
@@ -81,19 +98,17 @@ sub _set_web_server_options {
 }
 
 sub web_server {
-    my $self = shift;
-    return $self->{web_server} ||= do {
-        my $server = Test::AnyEvent::plackup->new;
-        $server->app($self->psgi_f);
-        $self->_set_web_server_options($server);
-        $server;
-    };
+    return $_[0]->{web_server} ||= Test::AnyEvent::plackup->new;
 }
 
 sub _start_web_server {
     my $self = shift;
 
     my $server = $self->web_server;
+    $server->perl($self->perl);
+    $server->perl_inc($self->perl_inc);
+    $server->app($self->psgi_f);
+    $self->_set_web_server_options($server);
 
     $self->{web_start_cv} = my $cv1 = AE::cv;
     $self->{web_stop_cv} = my $cv2 = AE::cv;
@@ -133,50 +148,41 @@ sub start_mysql_and_web_servers_as_cv {
 
 # ------ Workaholicd ------
 
+sub workaholicd {
+    return $_[0]->{workaholicd} ||= Test::AnyEvent::Workaholicd->new_from_root_d($_[0]->root_d);
+}
+
 sub workaholicd_f {
-    my $self = shift;
-    if (@_) {
-        $self->{workaholicd_f} = shift;
-    }
-    return $self->{workaholicd_f} ||= $self->root_d->file('bin', 'workaholicd.pl');
+    return shift->workaholicd->server_pl_f(@_);
 }
 
 sub workaholicd_conf_f {
-    my $self = shift;
-    return $self->{workaholicd_conf_f} ||= $self->root_d->file('config', 'workaholicd.pl');
+    return shift->workaholicd->config_pl_f(@_);
 }
 
 sub _set_workaholicd_options {
-    my ($self, $envs) = @_;
-    $envs->{MYSQL_DSNS_JSON} = $self->dsns_json_f->stringify;
-    $envs->{WEB_HOSTNAME} = $self->web_hostname;
-    $envs->{WEB_PORT} = $self->web_port;
+    my ($self, $server) = @_;
+    $server->set_env(MYSQL_DSNS_JSON => $self->dsns_json_f->stringify);
+    $server->set_env(WEB_HOSTNAME => $self->web_hostname);
+    $server->set_env(WEB_PORT => $self->web_port);
 }
 
 sub start_workaholicd_as_cv {
     weaken(my $self = shift);
     my $cv = AE::cv;
     $self->{workaholicd_boot_cv}->cb(sub {
-        my $envs = {%ENV};
-        $self->_set_workaholicd_options($envs);
-        local %ENV = %$envs;
-        
-        my $pid;
-        $self->{workaholicd_cv} = run_cmd
-            [
-                'perl',
-                $self->workaholicd_f->stringify, 
-                $self->workaholicd_conf_f->stringify,
-            ],
-            '$$' => \$pid;
+        my $server = $self->workaholicd;
+        $server->perl($self->perl);
+        $server->perl_inc($self->perl_inc);
+        $self->_set_workaholicd_options($server);
+        my ($cv1, $cv2) = $server->start_server;
         $self->{workaholicd_stop_cv} = AE::cv;
-        $self->{workaholicd_cv}->cb(sub {
+        $cv2->cb(sub {
             if (my $return = $_[0]->recv >> 8) {
                 die "Can't start workaholicd: " . $return;
             }
             $self->{workaholicd_stop_cv}->send;
         });
-        $self->{workaholicd_pid} = $pid;
     });
     $cv->send;
     return $cv;
@@ -218,9 +224,7 @@ sub context_end {
     if (--$self->{rc} > 0) {
         $cb2->();
     } else {
-        if ($self->{workaholicd_pid}) {
-            kill 15, $self->{workaholicd_pid}; # SIGTERM
-        }
+        $self->workaholicd->stop_server;
         if ($self->{web_stop_cv}) {
             $self->{web_stop_cv}->cb(sub {
                 $cb2->();
