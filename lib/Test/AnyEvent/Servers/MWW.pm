@@ -242,6 +242,10 @@ sub context_end {
     }
 }
 
+sub stop_server {
+    return $_[0]->context_end($_[1]);
+}
+
 sub DESTROY {
     {
         local $@;
