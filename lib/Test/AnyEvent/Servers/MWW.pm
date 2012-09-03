@@ -243,7 +243,15 @@ sub context_end {
 }
 
 sub stop_server {
-    return $_[0]->context_end($_[1]);
+    $_[0]->context_end($_[1]);
+}
+
+sub stop_server_as_cv {
+    my $cv = AE::cv;
+    $_[0]->context_end(sub {
+        $cv->send;
+    });
+    return $cv;
 }
 
 sub DESTROY {
