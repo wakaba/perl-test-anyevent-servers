@@ -183,7 +183,7 @@ sub start_workaholicd_as_cv {
             }
             $self->{workaholicd_stop_cv}->send;
         });
-    });
+    }) unless $self->{workaholicd_started}++;
     $cv->send;
     return $cv;
 }
