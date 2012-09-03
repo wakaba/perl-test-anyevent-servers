@@ -183,7 +183,7 @@ sub start_workaholicd_as_cv {
             }
             $self->{workaholicd_stop_cv}->send;
         });
-    });
+    }) unless $self->{workaholicd_started}++;
     $cv->send;
     return $cv;
 }
@@ -200,6 +200,20 @@ sub web_port {
 
 sub web_host {
     return $_[0]->web_hostname . ':' . $_[0]->web_server->port;
+}
+
+sub onstdout {
+    my $self = shift;
+    $self->mysql_server->onstdout(@_);
+    $self->web_server->onstdout(@_);
+    $self->workaholicd->onstdout(@_);
+}
+
+sub onstderr {
+    my $self = shift;
+    $self->mysql_server->onstderr(@_);
+    $self->web_server->onstderr(@_);
+    $self->workaholicd->onstderr(@_);
 }
 
 sub context_begin {
