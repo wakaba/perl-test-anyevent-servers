@@ -248,10 +248,10 @@ sub context_end {
         }
         if ($self->{workaholicd_stop_cv}) {
             $self->{workaholicd_stop_cv}->cb(sub {
-                $self->web_server->stop_server;
+                $self->{web_server}->stop_server if $self->{web_server};
             });
         } else {
-            $self->web_server->stop_server;
+            $self->{web_server}->stop_server if $self->{web_server};
         }
     }
 }
