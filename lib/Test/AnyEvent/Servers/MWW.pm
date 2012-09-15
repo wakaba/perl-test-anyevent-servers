@@ -51,7 +51,11 @@ sub prep_f {
 
 sub mysql_server {
     my $self = shift;
-    return $self->{mysql_server} ||= Test::AnyEvent::MySQL::CreateDatabase->new;
+    return $self->{mysql_server} ||= do {
+        my $server = Test::AnyEvent::MySQL::CreateDatabase->new;
+        $server->perl($self->perl);
+        $server;
+    };
 }
 
 sub dsns_json_f {
