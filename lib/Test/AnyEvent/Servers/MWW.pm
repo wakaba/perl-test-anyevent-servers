@@ -53,7 +53,6 @@ sub mysql_server {
     my $self = shift;
     return $self->{mysql_server} ||= do {
         my $server = Test::AnyEvent::MySQL::CreateDatabase->new;
-        $server->perl($self->perl);
         $server;
     };
 }
