@@ -81,11 +81,16 @@ sub start_mysql_server_as_cv {
     $cv->begin;
     $self->{mysql_cv}->cb(sub {
         $self->{mysql_context} = $_[0]->recv;
+        $self->_mysql_started($self->{mysql_context});
         $cv->end;
     });
     $cv->end;
 
     return $cv;
+}
+
+sub _mysql_started {
+    #
 }
 
 # ------ Web server ------
@@ -138,6 +143,7 @@ sub start_mysql_and_web_servers_as_cv {
     $cv->begin;
     $self->{mysql_cv}->cb(sub {
         $self->{mysql_context} = $_[0]->recv;
+        $self->_mysql_started($self->{mysql_context});
         $self->_start_web_server;
         $self->{workaholicd_boot_cv}->send;
         $self->{web_start_cv}->cb(sub {
