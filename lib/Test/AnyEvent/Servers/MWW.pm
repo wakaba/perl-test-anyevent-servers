@@ -9,7 +9,6 @@ use Scalar::Util qw(weaken);
 use File::Temp;
 use Test::AnyEvent::MySQL::CreateDatabase;
 use Test::AnyEvent::plackup;
-use Test::AnyEvent::Workaholicd;
 
 sub new_from_root_d {
     return bless {workaholicd_boot_cv => AE::cv, root_d => $_[1]}, $_[0];
@@ -157,7 +156,15 @@ sub start_mysql_and_web_servers_as_cv {
 
 # ------ Workaholicd ------
 
+sub workaholicd_disabled {
+    if (@_ > 1) {
+        $_[0]->{workaholicd_disabled} = $_[1];
+    }
+    return $_[0]->{workaholicd_disabled};
+}
+
 sub workaholicd {
+    require Test::AnyEvent::Workaholicd;
     return $_[0]->{workaholicd} ||= Test::AnyEvent::Workaholicd->new_from_root_d($_[0]->root_d);
 }
 
@@ -215,14 +222,14 @@ sub onstdout {
     my $self = shift;
     $self->mysql_server->onstdout(@_);
     $self->web_server->onstdout(@_);
-    $self->workaholicd->onstdout(@_);
+    $self->workaholicd->onstdout(@_) unless $self->workaholicd_disabled;
 }
 
 sub onstderr {
     my $self = shift;
     $self->mysql_server->onstderr(@_);
     $self->web_server->onstderr(@_);
-    $self->workaholicd->onstderr(@_);
+    $self->workaholicd->onstderr(@_) unless $self->workaholicd_disabled;
 }
 
 sub context_begin {
@@ -247,7 +254,7 @@ sub context_end {
     if (--$self->{rc} > 0) {
         $cb2->();
     } else {
-        $self->workaholicd->stop_server;
+        $self->workaholicd->stop_server unless $self->workaholicd_disabled;
         if ($self->{web_stop_cv}) {
             $self->{web_stop_cv}->cb(sub {
                 $cb2->();
