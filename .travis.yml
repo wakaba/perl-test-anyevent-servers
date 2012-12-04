@@ -2,7 +2,7 @@ perl:
   - "5.16"
   - "5.10"
 before_install: git submodule update --init
-install: "make test-deps"
+#install: "make test-deps"
 script: "make test"
 notifications:
   email:
