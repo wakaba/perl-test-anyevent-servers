@@ -1,46 +1,40 @@
+# -*- Makefile -*-
+
 all:
 
-# ------ Setup ------
+## ------ Setup ------
 
 WGET = wget
 GIT = git
-PERL = perl
-PERL_VERSION = latest
-PERL_PATH = $(abspath local/perlbrew/perls/perl-$(PERL_VERSION)/bin)
 
-PMB_PMTAR_REPO_URL =
-PMB_PMPP_REPO_URL = 
-
-Makefile-setupenv: Makefile.setupenv
-	$(MAKE) --makefile Makefile.setupenv setupenv-update \
-	    SETUPENV_MIN_REVISION=20120337
-
-Makefile.setupenv:
-	$(WGET) -O $@ https://raw.github.com/wakaba/perl-setupenv/master/Makefile.setupenv
-
-lperl lplackup lprove local-perl perl-version perl-exec \
-remotedev-test \
-pmb-install pmb-update cinnamon \
-local-submodules generatepm: %: Makefile-setupenv
-	$(MAKE) --makefile Makefile.setupenv $@ \
-	    PMB_PMTAR_REPO_URL=$(PMB_PMTAR_REPO_URL) \
-	    PMB_PMPP_REPO_URL=$(PMB_PMPP_REPO_URL)
+deps: git-submodules pmbp-install
 
 git-submodules:
 	$(GIT) submodule update --init
 
-# ------ Tests ------
+local/bin/pmbp.pl:
+	mkdir -p local/bin
+	$(WGET) -O $@ https://raw.github.com/wakaba/perl-setupenv/master/bin/pmbp.pl
+pmbp-upgrade: local/bin/pmbp.pl
+	perl local/bin/pmbp.pl --update-pmbp-pl
+pmbp-update: pmbp-upgrade
+	perl local/bin/pmbp.pl --update
+pmbp-install: pmbp-upgrade
+	perl local/bin/pmbp.pl --install \
+            --create-perl-command-shortcut perl \
+            --create-perl-command-shortcut prove \
+	    --create-perl-command-shortcut plackup \
+	    --create-perl-command-shortcut local/bin/which
 
-PERL_ENV = PATH="$(abspath local/perl-$(PERL_VERSION)/pm/bin):$(PERL_PATH):$(PATH)" PERL5LIB="$(shell cat config/perl/libs.txt)"
-PROVE = prove
+## ------ Tests ------
+
+PROVE = ./prove
 
 test: test-deps test-main
 
-test-deps: git-submodules pmb-install
-	-cd modules/rdb-utils && ln -s ../../local
-	-cd modules/workaholicd && ln -s ../../local
+test-deps: deps
 	cd modules/rdb-utils && $(MAKE) deps
 	cd modules/workaholicd && $(MAKE) deps
 
 test-main:
-	$(PERL_ENV) $(PROVE) t/*.t
+	$(PROVE) t/*.t

@@ -192,12 +192,12 @@ sub start_workaholicd_as_cv {
         $server->perl_inc($self->perl_inc);
         $self->_set_workaholicd_options($server);
         my ($cv1, $cv2) = $server->start_server;
-        $self->{workaholicd_stop_cv} = AE::cv;
+        my $cv0 = $self->{workaholicd_stop_cv} = AE::cv;
         $cv2->cb(sub {
             if (my $return = $_[0]->recv >> 8) {
                 die "Can't start workaholicd: " . $return;
             }
-            $self->{workaholicd_stop_cv}->send;
+            $cv0->send;
         });
     }) unless $self->{workaholicd_started}++;
     $cv->send;
