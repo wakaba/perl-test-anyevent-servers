@@ -272,8 +272,7 @@ test {
 
   $servers->stop_as_cv ('server1')->cb (sub {
     test {
-      my $server = $servers->get ('server1');
-      is $server, undef; 
+      is $servers->{opts}->{server1}->{server}, undef; 
       done $c;
       undef $c;
     } $c;
@@ -434,8 +433,8 @@ test {
     $servers->start_as_cv ('server2');
   };
   like $@, qr{Deep recursion};
-  ok not $servers->get ('server1');
-  ok not $servers->get ('server2');
+  ok not $servers->{opts}->{server1}->{server}; 
+  ok not $servers->{opts}->{server2}->{server}; 
   done $c;
   undef $c;
 } n => 3;
@@ -531,6 +530,22 @@ test {
     } $c;
   });
 } n => 2;
+
+test {
+  my $c = shift;
+  my $invoked;
+  my $servers = Test::AnyEvent::Servers->new;
+  $servers->add (server1 => {class => 'test::server1',
+                             on_init => sub { $invoked++ }});
+
+  my $server = $servers->get ('server1');
+  is $invoked, 1;
+  isa_ok $server, 'test::server1';
+  ok not $server->{started};
+  ok not $server->{stopped};
+  done $c;
+  undef $c;
+} n => 4;
 
 run_tests;
 

@@ -20,8 +20,20 @@ sub add ($$%) {
 
 sub get ($$) {
   my ($self, $name) = @_;
-  my $state = $self->{state}->{$name} or return undef;
-  return $state->{server}; # or undef
+  my $state = $self->{state}->{$name};
+  unless ($state) {
+    croak "Server |$name| is not registered";
+  }
+
+  my $opts = $self->{opts}->{$name};
+  return $state->{server} ||= do {
+    my $method = $opts->{constructor_name} || 'new';
+    my $class = $opts->{class};
+    eval qq{ require $class } or die $@;
+    my $server = $class->$method;
+    ($opts->{on_init} or sub { })->($self, $server);
+    $server;
+  };
 } # get
 
 sub start_as_cv ($$) {
@@ -63,20 +75,13 @@ sub start_as_cv ($$) {
       return;
     }
 
-    my $server = $state->{server} ||= do {
-      my $method = $opts->{constructor_name} || 'new';
-      my $class = $opts->{class};
-      eval qq{ require $class } or die $@;
-      my $server = $class->$method;
-      ($opts->{on_init} or sub { })->($self, $server);
-      $server;
-    };
+    my $server = $self->get ($name);
     
     {
       $state->{current} = 'starting';
       my $method = $opts->{starter_name} || 'start_as_cv';
       ($opts->{start_as_cv} || $server->can ($method))->($server)->cb (sub {
-        # XXX failure
+        # XXX failure ($opts->{is_error})
         $state->{current} = 'started';
         for (@{delete $state->{on_start} or []}) {
           $_->();
@@ -129,7 +134,7 @@ sub stop_as_cv ($$) {
     my $opts = $self->{opts}->{$name};
     my $method = $opts->{stopper_name} || 'stop_as_cv';
     ($opts->{stop_as_cv} || $state->{server}->can ($method))->($state->{server})->cb (sub {
-      # XXX failure
+      # XXX failure ($opts->{is_error})
       $state->{current} = 'stopped';
       for (@{delete $state->{on_stop} or []}) {
         $_->();
