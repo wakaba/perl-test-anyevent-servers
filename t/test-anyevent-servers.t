@@ -440,6 +440,27 @@ test {
   undef $c;
 } n => 3;
 
+test {
+  my $c = shift;
+  
+  my $servers = Test::AnyEvent::Servers->new;
+  $servers->add (server1 => {class => 'test::server1'});
+  $servers->add (server2 => {class => 'test::server1'});
+
+  $servers->start_as_cv ('server1')->cb (sub {
+    $servers->start_as_cv ('server2')->cb (sub {
+      $servers->stop_all_as_cv->cb (sub {
+        test {
+          ok $servers->get ('server1')->{stopped};
+          ok $servers->get ('server2')->{stopped};
+          done $c;
+          undef $c;
+        } $c;
+      });
+    });
+  });
+} n => 2;
+
 run_tests;
 
 =head1 LICENSE

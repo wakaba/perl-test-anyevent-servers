@@ -145,6 +145,20 @@ sub stop_as_cv ($$) {
   }
 } # stop_as_cv
 
+sub stop_all_as_cv ($) {
+  my $self = shift;
+  my $cv = AE::cv;
+  $cv->begin;
+  for (keys %{$self->{state} or {}}) {
+    unless ($self->{state}->{$_}->{current} eq 'stopped') {
+      $cv->begin;
+      $self->stop_as_cv ($_)->cb (sub { $cv->end });
+    }
+  }
+  $cv->end;
+  return $cv;
+} # stop_all_as_cv
+
 package Test::AnyEvent::Servers::Result;
 
 sub new ($;%) {
