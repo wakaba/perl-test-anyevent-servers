@@ -1,6 +1,7 @@
 package Test::AnyEvent::Servers;
 use strict;
 use warnings;
+use warnings FATAL => 'recursion';
 use Carp;
 use AnyEvent;
 
@@ -28,58 +29,69 @@ sub start_as_cv ($$) {
   my $cv = AE::cv;
 
   my $state = $self->{state}->{$name};
+  my $opts = $self->{opts}->{$name};
+
   unless ($state) {
     croak "Server |$name| is not registered";
   }
 
-  if ($state->{current} eq 'started') {
-    $cv->send (Test::AnyEvent::Servers::Result->new);
-    return $cv;
+  my $cv_req = AE::cv;
+  $cv_req->begin;
+  for (grep { $opts->{start_require}->{$_} } keys %{$opts->{start_require} or {}}) {
+    $cv_req->begin;
+    $self->start_as_cv ($_)->cb (sub { $cv_req->end });
   }
+  $cv_req->end;
 
-  my $opts = $self->{opts}->{$name};
-
-  if ($state->{current} eq 'starting') {
-    push @{$state->{on_start} ||= []}, sub {
+  $cv_req->cb (sub {
+    if ($state->{current} eq 'started') {
       $cv->send (Test::AnyEvent::Servers::Result->new);
+      return;
+    }
+
+    if ($state->{current} eq 'starting') {
+      push @{$state->{on_start} ||= []}, sub {
+        $cv->send (Test::AnyEvent::Servers::Result->new);
+      };
+      return;
+    }
+
+    if ($state->{current} eq 'stopping') {
+      push @{$state->{on_stop_then_start} ||= []}, sub {
+        $cv->send (Test::AnyEvent::Servers::Result->new);
+      };
+      return;
+    }
+
+    my $server = $state->{server} ||= do {
+      my $method = $opts->{constructor_name} || 'new';
+      my $class = $opts->{class};
+      eval qq{ require $class } or die $@;
+      $class->$method;
     };
-    return $cv;
-  }
-
-  if ($state->{current} eq 'stopping') {
-    push @{$state->{on_stop_then_start} ||= []}, sub {
-      $cv->send (Test::AnyEvent::Servers::Result->new);
-    };
-    return $cv;
-  }
-
-  my $server = $state->{server} ||= do {
-    my $method = $opts->{constructor_name} || 'new';
-    my $class = $opts->{class};
-    eval qq{ require $class } or die $@;
-    $class->$method;
-  };
-
-  {
-    $state->{current} = 'starting';
-    my $method = $opts->{starter_name} || 'start_as_cv';
-    $server->$method->cb(sub {
-      # XXX failure
-      $state->{current} = 'started';
-      for (@{delete $state->{on_start} or []}) {
-        $_->();
-      }
-      $cv->send (Test::AnyEvent::Servers::Result->new);
-      if (my $codes = delete $state->{on_start_then_stop}) {
-        $self->stop_as_cv ($name)->cb (sub {
-          for (@$codes) {
-            $_->();
-          }
-        });
-      }
-    });
-    return $cv;
-  }
+    
+    {
+      $state->{current} = 'starting';
+      my $method = $opts->{starter_name} || 'start_as_cv';
+      $server->$method->cb(sub {
+        # XXX failure
+        $state->{current} = 'started';
+        for (@{delete $state->{on_start} or []}) {
+          $_->();
+        }
+        $cv->send (Test::AnyEvent::Servers::Result->new);
+        if (my $codes = delete $state->{on_start_then_stop}) {
+          $self->stop_as_cv ($name)->cb (sub {
+            for (@$codes) {
+              $_->();
+            }
+          });
+        }
+      });
+      return;
+    }
+  });
+  return $cv;
 } # start_as_cv
 
 sub stop_as_cv ($$) {

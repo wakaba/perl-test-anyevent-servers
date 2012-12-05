@@ -403,6 +403,43 @@ test {
   };
 } n => 12;
 
+test {
+  my $c = shift;
+
+  my $servers = Test::AnyEvent::Servers->new;
+  $servers->add (server1 => {class => 'test::server1'});
+  $servers->add (server2 => {class => 'test::server1',
+                             start_require => {server1 => 1}});
+  
+  $servers->start_as_cv ('server2')->cb (sub {
+    test {
+      is $servers->get ('server1')->{started}, 1;
+      is $servers->get ('server2')->{started}, 1;
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 2;
+
+test {
+  my $c = shift;
+
+  my $servers = Test::AnyEvent::Servers->new;
+  $servers->add (server1 => {class => 'test::server1',
+                             start_require => {server2 => 1}});
+  $servers->add (server2 => {class => 'test::server1',
+                             start_require => {server1 => 1}});
+
+  eval {
+    $servers->start_as_cv ('server2');
+  };
+  like $@, qr{Deep recursion};
+  ok not $servers->get ('server1');
+  ok not $servers->get ('server2');
+  done $c;
+  undef $c;
+} n => 3;
+
 run_tests;
 
 =head1 LICENSE
