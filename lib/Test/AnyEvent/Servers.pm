@@ -80,7 +80,7 @@ sub start_as_cv ($$) {
     {
       $state->{current} = 'starting';
       my $method = $opts->{starter_name} || 'start_as_cv';
-      ($opts->{start_as_cv} || $server->can ($method))->($server)->cb (sub {
+      ($opts->{start_as_cv} || $server->can ($method) || croak "No starter method for $name ($method)")->($server)->cb (sub {
         # XXX failure ($opts->{is_error})
         $state->{current} = 'started';
         for (@{delete $state->{on_start} or []}) {
@@ -133,7 +133,7 @@ sub stop_as_cv ($$) {
     $state->{current} = 'stopping';
     my $opts = $self->{opts}->{$name};
     my $method = $opts->{stopper_name} || 'stop_as_cv';
-    ($opts->{stop_as_cv} || $state->{server}->can ($method))->($state->{server})->cb (sub {
+    ($opts->{stop_as_cv} || $state->{server}->can ($method) || croak "No stopper method for |$name| ($method)")->($state->{server})->cb (sub {
       # XXX failure ($opts->{is_error})
       $state->{current} = 'stopped';
       for (@{delete $state->{on_stop} or []}) {
