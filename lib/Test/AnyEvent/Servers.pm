@@ -67,13 +67,15 @@ sub start_as_cv ($$) {
       my $method = $opts->{constructor_name} || 'new';
       my $class = $opts->{class};
       eval qq{ require $class } or die $@;
-      $class->$method;
+      my $server = $class->$method;
+      ($opts->{on_init} or sub { })->($self, $server);
+      $server;
     };
     
     {
       $state->{current} = 'starting';
       my $method = $opts->{starter_name} || 'start_as_cv';
-      $server->$method->cb(sub {
+      ($opts->{start_as_cv} || $server->can ($method))->($server)->cb (sub {
         # XXX failure
         $state->{current} = 'started';
         for (@{delete $state->{on_start} or []}) {
@@ -126,7 +128,7 @@ sub stop_as_cv ($$) {
     $state->{current} = 'stopping';
     my $opts = $self->{opts}->{$name};
     my $method = $opts->{stopper_name} || 'stop_as_cv';
-    $state->{server}->$method->cb (sub {
+    ($opts->{stop_as_cv} || $state->{server}->can ($method))->($state->{server})->cb (sub {
       # XXX failure
       $state->{current} = 'stopped';
       for (@{delete $state->{on_stop} or []}) {

@@ -461,6 +461,77 @@ test {
   });
 } n => 2;
 
+test {
+  my $c = shift;
+  my $servers = Test::AnyEvent::Servers->new;
+  my $cv;
+  $servers->add (server1 => {class => 'test::server1', 
+                             start_as_cv => sub { $cv = AE::cv }});
+  $servers->start_as_cv ('server1')->cb (sub {
+    test {
+      ok !$servers->get ('server1')->{started};
+      done $c;
+      undef $c;
+    } $c;
+  });
+  ok $cv;
+  $cv->send;
+} n => 2;
+
+test {
+  my $c = shift;
+  my $servers = Test::AnyEvent::Servers->new;
+  $servers->add (server1 => {class => 'test::server1', 
+                             start_as_cv => sub { $_[0]->start_as_cv }});
+  $servers->start_as_cv ('server1')->cb (sub {
+    test {
+      ok $servers->get ('server1')->{started};
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 1;
+
+test {
+  my $c = shift;
+  my $cv;
+  my $servers = Test::AnyEvent::Servers->new;
+  $servers->add (server1 => {class => 'test::server1',
+                             stop_as_cv => sub { $cv = AE::cv }});
+  $servers->start_as_cv ('server1')->cb (sub {
+    $servers->stop_as_cv ('server1')->cb (sub {
+      test {
+        ok !$servers->get ('server1')->{stopped};
+        done $c;
+        undef $c;
+      } $c;
+    });
+    test {
+      ok $cv;
+      $cv->send;
+    } $c;
+  });
+} n => 2;
+
+test {
+  my $c = shift;
+  my $servers = Test::AnyEvent::Servers->new;
+  $servers->add (server1 => {class => 'test::server1',
+                             on_init => sub {
+                               $_[1]->{args0} = ref $_[0];
+                               $_[1]->{args1} = ref $_[1];
+                             }});
+  $servers->start_as_cv ('server1')->cb (sub {
+    test {
+      my $server = $servers->get ('server1');
+      is $server->{args0}, 'Test::AnyEvent::Servers';
+      is $server->{args1}, 'test::server1';
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 2;
+
 run_tests;
 
 =head1 LICENSE
