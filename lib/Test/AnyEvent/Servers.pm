@@ -159,6 +159,10 @@ sub stop_all_as_cv ($) {
   return $cv;
 } # stop_all_as_cv
 
+sub DESTROY ($) {
+  $_[0]->stop_all_as_cv;
+} # DESTORY
+
 package Test::AnyEvent::Servers::Result;
 
 sub new ($;%) {
