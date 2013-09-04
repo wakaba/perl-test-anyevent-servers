@@ -42,13 +42,28 @@ use Test::AnyEvent::Servers;
 test {
   my $c = shift;
   my $servers = Test::AnyEvent::Servers->new;
-  $servers->add (server1 => {});
   eval {
     $servers->add (server1 => {});
   };
   ok $@;
+  $@ = undef;
+  eval {
+    $servers->get ('server1');
+  };
+  ok $@;
   done $c;
-} n => 1;
+} n => 2, name => 'no |class| error';
+
+test {
+  my $c = shift;
+  my $servers = Test::AnyEvent::Servers->new;
+  $servers->add (server1 => {class => 'hoge'});
+  eval {
+    $servers->add (server1 => {class => 'fuga'});
+  };
+  ok $@;
+  done $c;
+} n => 1, name => 'name duplicate error';
 
 test {
   my $c = shift;
