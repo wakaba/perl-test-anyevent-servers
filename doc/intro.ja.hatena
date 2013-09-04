@@ -1,0 +1,80 @@
+Web アプリケーションのテストをするときには、当該 Web アプリケーションサー
+バーのみならず、 MySQL サーバー、ワーカーなどいくつかのサーバーも起動し
+たいことがよくあります。また、 MySQL サーバーが起動するまでアプリケーショ
+ンサーバーを起動したくない、といったような起動順序の依存関係があったり
+もします。この煩雑なサーバー起動処理をまとめて行うのが
+Test::AnyEvent::Servers です。
+
+- Test::AnyEvent::Servers https://github.com/wakaba/perl-test-anyevent-servers/blob/master/lib/Test/AnyEvent/Servers.pm
+
+* 使い方
+
+まずは各サーバーごとに名前と必要な処理を登録します。
+
+>|perl|
+my $servers = Test::AnyEvent::Servers->new;
+
+# MySQL サーバー
+$servers->add(mysql => {
+    class => 'Test::AnyEvent::MySQL::Server',
+    start_as_cv => sub {
+        return $_[0]->prep_f_to_dsns_json_as_cv($prep_f => $dsns_json_f, dup_master_defs => 1);
+    },
+    is_error => sub {
+        return $_[2] && $_[2]->error;
+    },
+});
+
+# Starlet サーバー
+my ($web_start_cv, $web_stop_cv);
+$servers->add(starlet => {
+    class => 'Test::AnyEvent::plackup',
+    start_require => {mysql => 1},
+    on_init => sub {
+        my $server = $_[1];
+        $server->app($root_d->file('bin', 'server.psgi'));
+        $server->set_env(KARASUMA_CONFIG_JSON => $config_json_f->stringify);
+        $server->set_env(RIDGE_ENV => 'test');
+        $server->server('Starlet');
+    },
+    start_as_cv => sub {
+        ($web_start_cv, $web_stop_cv) = $_[0]->start_server;
+        return $web_start_cv;
+    },
+    stop_as_cv => sub {
+        $_[0]->stop_server;
+        return $web_stop_cv;
+    },
+});
+||<
+
+それぞれのサーバーについて、管理を行うモジュールと、開始、終了等の処理
+の内容を指定しておきます。モジュールは AnyEvent ベースで、
+Test::AnyEvent::Servers が求める最低限の要件を満たすものなら、何でも構
+いません。例えば次のものが使えます。
+
+- Test::AnyEvent::plackup https://github.com/wakaba/perl-test-anyevent-plackup/blob/master/lib/Test/AnyEvent/plackup.pod
+- Test::AnyEvent::Apache https://github.com/wakaba/perl-test-anyevent-apache/blob/master/lib/Test/AnyEvent/Apache.pm
+- Test::AnyEvent::MySQL::Server https://github.com/wakaba/perl-rdb-utils/blob/master/lib/Test/AnyEvent/MySQL/Server.pm
+- Test::AnyEvent::Workaholicd https://github.com/wakaba/workaholicd/blob/master/lib/Test/AnyEvent/Workaholicd.pm
+- Test::AnyEvent::Memcached::MemcachedServer https://github.com/wakaba/perl-test-anyevent-memcached/tree/master/lib/Test/AnyEvent/Memcached
+- Test::AnyEvent::Servers を再帰的に使うこともやりたければできます
+
+あとはこれを起動するだけです。
+
+>|perl|
+my $cv = AE::cv;
+$servers->start_as_cv('starlet')->cb(sub {
+    ...
+    $cv->send;
+});
+$cv->recv;
+||<
+
+"starlet" サーバーは start_require に "mysql" が指定されているので、
+MySQL サーバーを起動してから Starlet が起動し、 ... が実行されます。
+
+実際に使う時は、設定ファイルを書き込んだり、 MySQL サーバーの DSN を
+Web サーバーに渡したり、 Web サーバーのポート番号をテストに渡したり、
+Web サーバーの起動を待ってテスト本体を実行したり、というような処理が必
+要になるのでちょっと複雑になるかもしれません。
