@@ -30,7 +30,7 @@ sub get ($$) {
 
   my $opts = $self->{opts}->{$name};
   return $state->{server} ||= do {
-    my $method = $opts->{constructor_name} || 'new';
+    my $method = $opts->{construct} || $opts->{constructor_name} || 'new';
     my $class = $opts->{class};
     eval qq{ require $class } or die $@;
     my $server = $class->$method;
