@@ -14,6 +14,9 @@ sub add ($$%) {
   if ($self->{state}->{$name}) {
     croak "Server |$name| is already registered";
   }
+  unless ($opts->{class}) {
+    croak "|class| of server |$name| is not specified";
+  }
   $self->{opts}->{$name} = $opts;
   $self->{state}->{$name} = {current => 'stopped'};
 } # add
