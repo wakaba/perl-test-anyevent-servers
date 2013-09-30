@@ -6,7 +6,7 @@ use Carp;
 use AnyEvent;
 
 sub new ($) {
-  return bless {}, $_[0];
+  return bless {pid => $$}, $_[0];
 } # new
 
 sub add ($$%) {
@@ -170,7 +170,7 @@ sub stop_all_as_cv ($) {
 } # stop_all_as_cv
 
 sub DESTROY ($) {
-  $_[0]->stop_all_as_cv;
+  $_[0]->stop_all_as_cv if ($_[0]->{pid} || 0) == $$;
 } # DESTORY
 
 package Test::AnyEvent::Servers::Result;
