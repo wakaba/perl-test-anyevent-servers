@@ -170,7 +170,15 @@ sub stop_all_as_cv ($) {
 } # stop_all_as_cv
 
 sub DESTROY ($) {
-  $_[0]->stop_all_as_cv if ($_[0]->{pid} || 0) == $$;
+  if (($_[0]->{pid} || 0) == $$) {
+      my $cv = $_[0]->stop_all_as_cv;
+      {
+          local $@;
+          eval { $cv->recv; 1 } or do {
+              warn $@ unless $@ =~ /^AnyEvent::CondVar: recursive blocking wait attempted/;
+          };
+      }
+  }
 } # DESTORY
 
 package Test::AnyEvent::Servers::Result;
