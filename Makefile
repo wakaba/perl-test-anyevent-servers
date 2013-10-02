@@ -33,7 +33,6 @@ PROVE = ./prove
 test: test-deps test-main
 
 test-deps: deps
-	cd t_deps/modules/rdb-utils && $(MAKE) deps
 	cd t_deps/modules/workaholicd && $(MAKE) deps
 
 test-main:
