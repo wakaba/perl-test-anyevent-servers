@@ -1,0 +1,9 @@
+- Starman
+- Starlet
+- Twiggy
+- Twiggy::Prefork
+
+- "../../t_deps/modules/json-functions-xs" tests
+- "../../t_deps/modules/rdb-utils" tests
+- "../../t_deps/modules/test-anyevent-plackup" tests
+- "../../t_deps/modules/workaholicd" tests daemon
