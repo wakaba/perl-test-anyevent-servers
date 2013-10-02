@@ -8,6 +8,16 @@ The C<Test::AnyEvent::Servers::MWW> module can be used to prepare
 database (MySQL), Web (Plack-based), and workaholicd server processes
 for test scripts.
 
+=head1 DEPENDENCY
+
+This module requires Perl 5.8 or later.  In addition, for this module
+being useful, following packages are required:
+
+<https://github.com/wakaba/perl-rdb-utils> (containing
+C<Test::AnyEvent::MySQL::CreateDatabase>),
+<https://github.com/wakaba/perl-test-anyevent-plackup>, and optionally
+<https://github.com/wakaba/workaholicd>.
+
 =head1 SEE ALSO
 
 L<Test::MySQL::CreateDatabase>,
@@ -23,7 +33,7 @@ Wakaba <wakabatan@hatena.ne.jp>.
 
 =head1 LICENSE
 
-Copyright 2012 Hatena <http://www.hatena.ne.jp/>.
+Copyright 2012-2013 Hatena <http://www.hatena.ne.jp/company/>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

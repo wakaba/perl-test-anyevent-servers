@@ -7,8 +7,6 @@ use AnyEvent::Util;
 use MIME::Base64 qw(encode_base64);
 use Scalar::Util qw(weaken);
 use File::Temp;
-use Test::AnyEvent::MySQL::CreateDatabase;
-use Test::AnyEvent::plackup;
 
 sub new_from_root_d {
     return bless {workaholicd_boot_cv => AE::cv, root_d => $_[1]}, $_[0];
@@ -51,6 +49,7 @@ sub prep_f {
 sub mysql_server {
     my $self = shift;
     return $self->{mysql_server} ||= do {
+        require Test::AnyEvent::MySQL::CreateDatabase;
         my $server = Test::AnyEvent::MySQL::CreateDatabase->new;
         $server;
     };
@@ -105,6 +104,7 @@ sub _set_web_server_options {
 }
 
 sub web_server {
+    require Test::AnyEvent::plackup;
     return $_[0]->{web_server} ||= Test::AnyEvent::plackup->new;
 }
 

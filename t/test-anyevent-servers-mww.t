@@ -1,17 +1,7 @@
 use strict;
-BEGIN {
-    my $file_name = __FILE__;
-    $file_name =~ s{[^/]+$}{};
-    $file_name ||= '.';
-    $file_name .= '/../config/perl/libs.txt';
-    if (-f $file_name) {
-        open my $file, '<', $file_name or die "$0: $file_name: $!";
-        unshift @INC, split /:/, scalar <$file>;
-    }
-}
 use warnings;
 use Path::Class;
-use lib glob file(__FILE__)->dir->subdir('modules', '*', 'lib')->stringify;
+use lib glob file(__FILE__)->dir->parent->subdir('t_deps', 'modules', '*', 'lib')->stringify;
 use File::Temp;
 use Test::X1;
 use Test::More;
@@ -92,7 +82,7 @@ test {
     my $server = Test::AnyEvent::Servers::MWW->new_from_root_d($root_d);
     $server->perl(file(__FILE__)->dir->parent->file('perl'));
     $server->web_server->plackup($plackup);
-    $server->workaholicd_f(file(__FILE__)->dir->parent->subdir('modules', 'workaholicd', 'bin')->file('workaholicd.pl'));
+    $server->workaholicd_f(file(__FILE__)->dir->parent->subdir('t_deps', 'modules', 'workaholicd', 'bin')->file('workaholicd.pl'));
     my $cv1 = $server->start_mysql_and_web_servers_as_cv;
     my $cv2 = $server->start_workaholicd_as_cv;
     my $cv = AE::cv;
