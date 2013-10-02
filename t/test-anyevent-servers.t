@@ -131,7 +131,15 @@ test {
   $servers->add (server1 => {class => 'test::server2'});
 
   my $cv = AE::cv;
-  $cv->begin (sub { done $c; undef $c });
+  $cv->begin (sub {
+    $servers->stop_as_cv ('server1')->cb (sub {
+      done $c; undef $c;
+    });
+    my $t; $t = AE::timer 0.1, 0, sub {
+      $servers->get ('server1')->{stop_cv}->send;
+      undef $t;
+    };
+  });
   $cv->begin;
   $servers->start_as_cv ('server1')->cb (sub {
     test {
@@ -390,22 +398,31 @@ test {
     });
     $cv->end;
 
-    $cv->cb (sub { done $c; undef $c });
+    $cv->cb (sub {
+      $servers->stop_all_as_cv->cb(sub {
+        done $c; undef $c;
+      });
 
-    my $timer; $timer = AE::timer 0, 0.2, sub {
+      my $t; $t = AE::timer 0.2, 0, sub {
+        $servers->get ('server1')->{stop_cv}->send;
+        undef $t;
+      };
+    });
+
+    my $timer; $timer = AE::timer 0.2, 0, sub {
       my $server = $servers->get ('server1');
       $server->{stop_cv}->send;
       undef $timer;
     };
 
-    my $timer2; $timer2 = AE::timer 0, 0.4, sub {
+    my $timer2; $timer2 = AE::timer 0.4, 0, sub {
       my $server = $servers->get ('server1');
       $server->{start_cv}->send;
       undef $timer2;
     };
   });
 
-  my $timer; $timer = AE::timer 0, 0.2, sub {
+  my $timer; $timer = AE::timer 0.2, 0, sub {
     test {
       my $server = $servers->get ('server1');
       isa_ok $server, 'test::server2';
